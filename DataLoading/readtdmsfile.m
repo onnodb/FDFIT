@@ -10,6 +10,7 @@ function [fd] = readtdmsfile(filename, forceChannel, distanceChannel, beadDiamet
 % SYNTAX:
 % fd = readtdmsfile(filename);
 % fd = readtdmsfile(filename, forceChannel);
+% fd = readtdmsfile(filename, highResForceChannel);
 % fd = readtdmsfile(filename, forceChannel, distanceChannel);
 % fd = readtdmsfile(filename, forceChannel, distanceChannel, beadDiameter);
 %
@@ -18,6 +19,8 @@ function [fd] = readtdmsfile(filename, forceChannel, distanceChannel, beadDiamet
 % forceChannel = string in the format '(c|t)<n>'; 'c' indicates a channel
 %   force, 't' a trap force; '<n>' is the 1-based index of the
 %   channel/trap (default: 'c1').
+% highResForceChannel = a string in the format 'c<n>*', where '<n>' is the
+%   1-based index of the channel. In this case, no distance values are read.
 % distanceChannel = 1 or 2; indicates the distance channel to use (default: 1).
 % beadDiameter = bead diameter (in um) to subtract from all distance data.
 %                If the string 'auto' is given (default): tries to find the bead
@@ -25,13 +28,15 @@ function [fd] = readtdmsfile(filename, forceChannel, distanceChannel, beadDiamet
 %
 % OUTPUT:
 % fd = FdData object.
+%   If high-resolution force data is read, distance values in the object are
+%   empty (NaN).
 %
 % EXAMPLES:
-% >> readtwomdata;
+% >> readtdmsfile;
 % Browse for a TWOM data file, and load it using the default settings
 % (force channel 1 and distance channel 1).
 %
-% >> readtwomdata('mydata.tdms', 'c1', 1);
+% >> readtdmsfile('mydata.tdms', 'c1', 1);
 % Read Fd data from force channel 1 and distance channel 1.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -81,22 +86,37 @@ data = TDMS_getStruct(filename);
 
 [~, basename, ~] = fileparts(filename);
 
-fd = FdData(...
-            basename, ...
-            data.FD_Data.(forceChannelToTDMSChannelName(forceChannel)).data, ...
-            data.FD_Data.(distanceChannelToTDMSChannelName(distanceChannel)).data, ...
-            data.FD_Data.Time__ms_.data, ...
-            getMetaData(data, forceChannel, distanceChannel), ...
-            getMarks(data) ...
-            );
+if forceChannel(end) == '*'
+    bareForceChannel = forceChannel(1:end-1);
+    % High-res force data
+    fData = data.Ft_HiRes_Data.(forceChannelToTDMSChannelName(bareForceChannel)).data;
+    fd = FdData(...
+                basename, ...
+                fData, ...
+                NaN(size(fData)), ...
+                data.Ft_HiRes_Data.Time__ms_.data, ...
+                getMetaData(data, bareForceChannel, distanceChannel), ...
+                struct() ...
+                );
+else
+    % Normal force-distance data
+    fd = FdData(...
+                basename, ...
+                data.FD_Data.(forceChannelToTDMSChannelName(forceChannel)).data, ...
+                data.FD_Data.(distanceChannelToTDMSChannelName(distanceChannel)).data, ...
+                data.FD_Data.Time__ms_.data, ...
+                getMetaData(data, forceChannel, distanceChannel), ...
+                getMarks(data) ...
+                );
 
-if ischar(beadDiameter) && strcmpi(beadDiameter, 'auto')
-    % Auto-detect bead diameter.
-    beadDiameter = getBeadDiameterFromMetaData(data);
-end
-if beadDiameter ~= 0
-    % Subtract bead diameter.
-    fd = fd.shift('d', -beadDiameter);
+    if ischar(beadDiameter) && strcmpi(beadDiameter, 'auto')
+        % Auto-detect bead diameter.
+        beadDiameter = getBeadDiameterFromMetaData(data);
+    end
+    if beadDiameter ~= 0
+        % Subtract bead diameter.
+        fd = fd.shift('d', -beadDiameter);
+    end
 end
 
 
@@ -104,7 +124,8 @@ end
 
     function [valid] = isValidForceChannelSpec(forceChannel)
 		valid = ischar(forceChannel) ...
-			    && regexp(forceChannel, '^[ct][0-9]+$');
+			    && (~isempty(regexp(forceChannel, '^[ct][0-9]+$')) ...
+                     || ~isempty(regexp(forceChannel, '^c[0-9]+\*$')));
     end
 
     function [name] = forceChannelToTDMSChannelName(fc, isError)
