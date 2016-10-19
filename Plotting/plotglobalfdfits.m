@@ -1,0 +1,19 @@
+function plotglobalfdfits(fdc, fitRes)
+% PLOTGLOBALFDFITS Plot globally fitted force-extension data with associated fits.
+%
+% SYNTAX:
+% plotglobalfdfits(fdc, fitRes)
+%
+% INPUT:
+% fdc = the FdDataCollection the global fit was performed on.
+% fitRes = the output of the "fitfdglobal" function.
+
+explorecell(fdc.items, ...
+    @(ax,fd,idx) plotfdfit(...
+                        ax, ...
+                        fd, [fitRes.Lp fitRes.S fitRes.d0(idx) fitRes.F0(idx)], ...
+                        'model', 'odijk-d0-f0', 'Lc', fitRes.Lc ...
+                        ) ...
+            );
+
+end

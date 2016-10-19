@@ -1,0 +1,324 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>ADVANCED COLLECTION TRICKS</title><meta name="generator" content="MATLAB 8.4"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2015-02-01"><meta name="DC.source" content="AdvancedCollectionTricks.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h1>ADVANCED COLLECTION TRICKS</h1><!--introduction--><p>For more experienced MATLAB users, the <tt>FdDataCollection</tt> object harbors some nice time-saving tricks. In this small tutorial, I'll show you some of the most useful ones.</p><p>During this tutorial, I'll assume you know what a <a href="matlab:web(fullfile(docroot,'matlab/matlab_prog/overview-1.html'))">function handle</a> is. You'll also need to have some basic familiarity with <a href="matlab:web(fullfile(docroot,'matlab/matlab_prog/anonymous-functions.html'))">anonymous functions</a>.</p><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Loading the sample data</a></li><li><a href="#4">Using Tags</a></li><li><a href="#12">Combining Collections</a></li><li><a href="#14">Applying Operations to Collections</a></li></ul></div><h2>Loading the sample data<a name="1"></a></h2><p>Let's start by creating an <tt>FdDataCollection</tt> with the sample data:</p><pre class="codeinput">myCollection = readasciifolder(<span class="string">'Doc/SampleData/*.csv'</span>, <span class="string">'HeaderLines'</span>, 6);
+</pre><pre class="codeoutput">Reading Doc/SampleData/Sample01.csv...
+Reading Doc/SampleData/Sample02.csv...
+Reading Doc/SampleData/Sample03.csv...
+Reading Doc/SampleData/Sample04.csv...
+Reading Doc/SampleData/Sample05.csv...
+Reading Doc/SampleData/Sample06.csv...
+Reading Doc/SampleData/Sample07.csv...
+Reading Doc/SampleData/Sample08.csv...
+Reading Doc/SampleData/Sample09.csv...
+Reading Doc/SampleData/Sample10.csv...
+</pre><pre class="codeinput">disp(myCollection);
+</pre><pre class="codeoutput"> #    name                                          tags
+--------------------------------------------------------------------------------
+(1  ) Sample01                                                                                   
+(2  ) Sample02                                                                                   
+(3  ) Sample03                                                                                   
+(4  ) Sample04                                                                                   
+(5  ) Sample05                                                                                   
+(6  ) Sample06                                                                                   
+(7  ) Sample07                                                                                   
+(8  ) Sample08                                                                                   
+(9  ) Sample09                                                                                   
+(10 ) Sample10                                                                                   
+</pre><p>A plot of the sample data:</p><pre class="codeinput">plotfd(myCollection);
+</pre><img vspace="5" hspace="5" src="AdvancedCollectionTricks_01.png" alt=""> <h2>Using Tags<a name="4"></a></h2><p>As mentioned in the tutorial, <tt>FdData</tt> objects can be associated with <i>tags</i> (or 'categories'; you've probably encountered them on the internet before, e.g., Gmail). For the sake of this example, we will add some tags ourselves:</p><pre class="codeinput">myCollection.items{2}.addTag(<span class="string">'looksnice'</span>);
+myCollection.items{4}.addTag(<span class="string">'looksnice'</span>);
+myCollection.items{5}.addTag(<span class="string">'looksnice'</span>, <span class="string">'favorite'</span>);
+myCollection.items{6}.addTag(<span class="string">'favorite'</span>);
+myCollection.items{10}.addTag(<span class="string">'shortOSPlateau'</span>);
+disp(myCollection);
+</pre><pre class="codeoutput"> #    name                                          tags
+--------------------------------------------------------------------------------
+(1  ) Sample01                                                                                   
+(2  ) Sample02                                      looksnice                                    
+(3  ) Sample03                                                                                   
+(4  ) Sample04                                      looksnice                                    
+(5  ) Sample05                                      looksnice,favorite                           
+(6  ) Sample06                                      favorite                                     
+(7  ) Sample07                                                                                   
+(8  ) Sample08                                                                                   
+(9  ) Sample09                                                                                   
+(10 ) Sample10                                      shortOSPlateau                               
+</pre><p>The table produced by the <a href="matlab:doc('FdDataCollection/disp')">disp</a> function contains an overview of the tags we just added.</p><p>We can now easily retrieve curves from the collection that have a particular tag:</p><pre class="codeinput">nice = myCollection.getByTag(<span class="string">'looksnice'</span>);
+</pre><pre class="codeinput">disp(nice);
+</pre><pre class="codeoutput"> #    name                                          tags
+--------------------------------------------------------------------------------
+(1  ) Sample02                                      looksnice                                    
+(2  ) Sample04                                      looksnice                                    
+(3  ) Sample05                                      looksnice,favorite                           
+</pre><p>What's important to realize here, is that the objects (F,d curves) in our new <tt>nice</tt> collection, are still the same ones as in the original <tt>myCollection</tt>. They're just part of multiple <tt>FdDataCollections</tt> <i>at the same time</i>. (However, a collection cannot contain the same item more than once). We can see the effect of this if we add a tag to one of the items in <tt>nice</tt>:</p><pre class="codeinput">disp(nice);
+</pre><pre class="codeoutput"> #    name                                          tags
+--------------------------------------------------------------------------------
+(1  ) Sample02                                      looksnice                                    
+(2  ) Sample04                                      looksnice                                    
+(3  ) Sample05                                      looksnice,favorite                           
+</pre><pre class="codeinput">disp(myCollection)
+</pre><pre class="codeoutput"> #    name                                          tags
+--------------------------------------------------------------------------------
+(1  ) Sample01                                                                                   
+(2  ) Sample02                                      looksnice                                    
+(3  ) Sample03                                                                                   
+(4  ) Sample04                                      looksnice                                    
+(5  ) Sample05                                      looksnice,favorite                           
+(6  ) Sample06                                      favorite                                     
+(7  ) Sample07                                                                                   
+(8  ) Sample08                                                                                   
+(9  ) Sample09                                                                                   
+(10 ) Sample10                                      shortOSPlateau                               
+</pre><pre class="codeinput">nice.items{2}.addTag(<span class="string">'supercalifragilistic'</span>);
+disp(nice);
+</pre><pre class="codeoutput"> #    name                                          tags
+--------------------------------------------------------------------------------
+(1  ) Sample02                                      looksnice                                    
+(2  ) Sample04                                      looksnice,supercalifragilistic               
+(3  ) Sample05                                      looksnice,favorite                           
+</pre><pre class="codeinput">disp(myCollection);
+</pre><pre class="codeoutput"> #    name                                          tags
+--------------------------------------------------------------------------------
+(1  ) Sample01                                                                                   
+(2  ) Sample02                                      looksnice                                    
+(3  ) Sample03                                                                                   
+(4  ) Sample04                                      looksnice,supercalifragilistic               
+(5  ) Sample05                                      looksnice,favorite                           
+(6  ) Sample06                                      favorite                                     
+(7  ) Sample07                                                                                   
+(8  ) Sample08                                                                                   
+(9  ) Sample09                                                                                   
+(10 ) Sample10                                      shortOSPlateau                               
+</pre><p>As you can see, the F,d curve was updated in both collections, <i>because they're really the same object</i>. If you want to read more about this, see the MATLAB documentation on <a href="matlab:web(fullfile(docroot,'matlab/ref/handle.html'))">handle objects</a>.</p><p>Leaving that little detour, let's summarize the main point: you can use tags to organize your data. Instead of keeping, for example, different magnesium concentrations in different collections, you can just stuff all the data into one bit <tt>FdDataCollection</tt>, and then easily retrieve data for a particular concentration using the <a href="matlab:doc('FdDataCollection/getByTag')">getByTag</a> function.</p><h2>Combining Collections<a name="12"></a></h2><p>The <tt>FdDataCollection</tt> also contains a number of functions for combining collections in various ways. Say, for example, that we'd now like to find all F,d curves that have <i>either</i> the <tt>looksnice</tt> <i>or</i> the <tt>favorite</tt> tag. How do we do that?</p><p>Simple: we get collections for each of those tags separately, and then just 'add them up'. In set theory terms: we take the <a href="matlab:doc('FdDataCollection/union')">union</a>.</p><pre class="codeinput">nice = myCollection.getByTag(<span class="string">'looksnice'</span>);
+favs = myCollection.getByTag(<span class="string">'favorite'</span>);
+niceAndFavs = nice.union(favs);
+disp(niceAndFavs);
+</pre><pre class="codeoutput"> #    name                                          tags
+--------------------------------------------------------------------------------
+(1  ) Sample02                                      looksnice                                    
+(2  ) Sample04                                      looksnice,supercalifragilistic               
+(3  ) Sample05                                      looksnice,favorite                           
+(4  ) Sample06                                      favorite                                     
+</pre><p>Or, in a single line:</p><pre>  disp(myCollection.getByTag('looksnice').union(myCollection.getByTag('favorite')));</pre><p>You'll find more functions like this, including <a href="matlab:doc('FdDataCollection/intersect')">intersect</a>, <a href="matlab:doc('FdDataCollection/subtract')">subtract</a>, <a href="matlab:doc('FdDataCollection/isequal')">isequal</a>, and <a href="matlab:doc('FdDataCollection/isempty')">isempty</a>.</p><h2>Applying Operations to Collections<a name="14"></a></h2><p>Finally, the last time-saving trick involves the ability to easily apply operations to all curves in a collection.</p><p>Say we'd like to get subsets of the F,d curves: only the data below 30 pN. We could get this by writing a <tt>for</tt> loop:</p><pre class="codeinput">dataBelow30pN = FdDataCollection();
+<span class="keyword">for</span> i = 1:myCollection.length
+    dataBelow30pN.add(myCollection.items{i}.subset(<span class="string">'f'</span>, [-Inf 30]));
+<span class="keyword">end</span>
+</pre><p>That works perfectly fine, but you might enjoy using this syntax more:</p><pre class="codeinput">dataBelow30pN = myCollection.map(@(fd) fd.subset(<span class="string">'f'</span>, [-Inf 30]));
+</pre><p>Or, if you'd like to replace all items in <tt>myCollection</tt>, instead of getting a new collection with subsetted curves:</p><pre class="codeinput">myCollection.applyToAll(@(fd) fd.subset(<span class="string">'f'</span>, [-Inf 30]));
+</pre><p>To complement these two functions, there are also <a href="matlab:doc('FdDataCollection/filter')">filter</a>, to get a collection containing only items for which a particular function returns <tt>true</tt>; and <a href="matlab:doc('FdDataCollection/forAll')">for</a>, for running a function that doesn't return anything on all items in the collection.</p><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2014b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%% ADVANCED COLLECTION TRICKS
+% For more experienced MATLAB users, the |FdDataCollection| object harbors
+% some nice time-saving tricks. In this small tutorial, I'll show you some
+% of the most useful ones.
+%
+% During this tutorial, I'll assume you know what a
+% <matlab:web(fullfile(docroot,'matlab/matlab_prog/overview-1.html'))
+% function handle> is. You'll also need to have some basic familiarity with
+% <matlab:web(fullfile(docroot,'matlab/matlab_prog/anonymous-functions.html'))
+% anonymous functions>.
+
+%% Loading the sample data
+% Let's start by creating an |FdDataCollection| with the sample data:
+
+myCollection = readasciifolder('Doc/SampleData/*.csv', 'HeaderLines', 6);
+
+%%
+
+disp(myCollection);
+
+%%
+% A plot of the sample data:
+
+plotfd(myCollection);
+
+
+%% Using Tags
+% As mentioned in the tutorial, |FdData| objects can be associated with
+% _tags_ (or 'categories'; you've probably encountered them on the internet
+% before, e.g., Gmail). For the sake of this example, we will add some tags
+% ourselves:
+
+myCollection.items{2}.addTag('looksnice');
+myCollection.items{4}.addTag('looksnice');
+myCollection.items{5}.addTag('looksnice', 'favorite');
+myCollection.items{6}.addTag('favorite');
+myCollection.items{10}.addTag('shortOSPlateau');
+disp(myCollection);
+
+%%
+% The table produced by the <matlab:doc('FdDataCollection/disp') disp>
+% function contains an overview of the tags we just added.
+%
+% We can now easily retrieve curves from the collection that have a
+% particular tag:
+
+nice = myCollection.getByTag('looksnice');
+
+%%
+
+disp(nice);
+
+%%
+% What's important to realize here, is that the objects (F,d curves) in our
+% new |nice| collection, are still the same ones as in the original
+% |myCollection|. They're just part of multiple |FdDataCollections| _at the
+% same time_. (However, a collection cannot contain the same item more than
+% once). We can see the effect of this if we add a tag to one of the items
+% in |nice|:
+
+disp(nice);
+
+%%
+
+disp(myCollection)
+
+%%
+
+nice.items{2}.addTag('supercalifragilistic');
+disp(nice);
+
+%%
+
+disp(myCollection);
+
+%%
+% As you can see, the F,d curve was updated in both collections, _because
+% they're really the same object_. If you want to read more about this, see
+% the MATLAB documentation on
+% <matlab:web(fullfile(docroot,'matlab/ref/handle.html')) handle objects>.
+%
+% Leaving that little detour, let's summarize the main point: you can use
+% tags to organize your data. Instead of keeping, for example, different
+% magnesium concentrations in different collections, you can just stuff all
+% the data into one bit |FdDataCollection|, and then easily retrieve data
+% for a particular concentration using the
+% <matlab:doc('FdDataCollection/getByTag') getByTag> function.
+
+
+%% Combining Collections
+% The |FdDataCollection| also contains a number of functions for combining
+% collections in various ways. Say, for example, that we'd now like to find
+% all F,d curves that have _either_ the |looksnice| _or_ the |favorite|
+% tag. How do we do that?
+%
+% Simple: we get collections for each of those tags separately, and then
+% just 'add them up'. In set theory terms: we take the
+% <matlab:doc('FdDataCollection/union') union>.
+
+nice = myCollection.getByTag('looksnice');
+favs = myCollection.getByTag('favorite');
+niceAndFavs = nice.union(favs);
+disp(niceAndFavs);
+
+%%
+% Or, in a single line:
+%
+%    disp(myCollection.getByTag('looksnice').union(myCollection.getByTag('favorite')));
+%
+% You'll find more functions like this, including
+% <matlab:doc('FdDataCollection/intersect') intersect>,
+% <matlab:doc('FdDataCollection/subtract') subtract>,
+% <matlab:doc('FdDataCollection/isequal') isequal>, and
+% <matlab:doc('FdDataCollection/isempty') isempty>.
+
+
+%% Applying Operations to Collections
+% Finally, the last time-saving trick involves the ability to easily apply
+% operations to all curves in a collection.
+%
+% Say we'd like to get subsets of the F,d curves: only the data below 30
+% pN. We could get this by writing a |for| loop:
+
+dataBelow30pN = FdDataCollection();
+for i = 1:myCollection.length
+    dataBelow30pN.add(myCollection.items{i}.subset('f', [-Inf 30]));
+end
+
+%%
+% That works perfectly fine, but you might enjoy using this syntax more:
+
+dataBelow30pN = myCollection.map(@(fd) fd.subset('f', [-Inf 30]));
+
+%%
+% Or, if you'd like to replace all items in |myCollection|, instead of
+% getting a new collection with subsetted curves:
+
+myCollection.applyToAll(@(fd) fd.subset('f', [-Inf 30]));
+
+%%
+% To complement these two functions, there are also
+% <matlab:doc('FdDataCollection/filter') filter>, to get a collection
+% containing only items for which a particular function returns |true|; and
+% <matlab:doc('FdDataCollection/forAll') for>, for running a function that
+% doesn't return anything on all items in the collection.
+
+
+##### SOURCE END #####
+--></body></html>

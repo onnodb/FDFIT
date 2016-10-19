@@ -1,0 +1,184 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>ANALYZING LUMICKS DATA</title><meta name="generator" content="MATLAB 8.4"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2015-02-02"><meta name="DC.source" content="AnalyzingLumicksData.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h1>ANALYZING LUMICKS DATA</h1><!--introduction--><p>This document describes how to load, process, and analyze data that is produced by the TWOM/Lumicks LabVIEW software (this is the software that was used to measure the raw data from the paper). I will assume you have already read the "Tutorial", and familiarized yourself with the basic functions of the FDFIT package.</p><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Loading Data From TDMS Files</a></li><li><a href="#4">Using Data Marks</a></li></ul></div><h2>Loading Data From TDMS Files<a name="1"></a></h2><p>TWOM/Lumicks software stores the measured data in LabVIEW TDMS files. TDMS is a file format specific to LabVIEW, but fortunately, it can easily be imported into MATLAB. We'll use the <a href="matlab:doc('readtdmsfile')">readtdmsfile</a> function for that:</p><pre class="codeinput">fd = readtdmsfile(<span class="string">'Doc/SampleData/TDMSSample.tdms'</span>, <span class="string">'c1'</span>, 1);
+</pre><p>This command loads Force Channel 1, Distance 1. The function will also automatically subtract the bead diameter, as found in the file's metadata.</p><p>If you want to load another force or distance channel, you can do so:</p><pre class="language-matlab">fd = readtdmsfile(<span class="string">'Doc/SampleData/TDMSSample.tdms'</span>, <span class="string">'t2'</span>, 2);
+</pre><p>This loads the total force on Trap 2, combined with Distance 2.</p><p>For data files made with older versions of TWOM, or in case the bead diameter as stored in the file is incorrect, you can also specify the bead diameter manually:</p><pre class="language-matlab">fd = readtdmsfile(<span class="string">'Doc/SampleData/TDMSSample.tdms'</span>, <span class="string">'c1'</span>, <span class="string">'1'</span>, 3.08);    <span class="comment">% bead diameter 3.08 um</span>
+</pre><p>If you'd rather pick a file by browsing, you can also do this:</p><pre class="language-matlab">fd = readtdmsfile();
+</pre><p>Finally, please note that all metadata from the TDMS file is automatically imported, too. Just use the <tt>disp</tt> function with the <tt>'full'</tt> argument to show it:</p><pre class="codeinput">disp(fd, <span class="string">'full'</span>);
+</pre><pre class="codeoutput">[ FD DATA OBJECT ]
+|--- Name:     TDMSSample
+|--- Metadata: 
+|    |--- id                       : C0FE0590-2B23-4112-B078-AA679FC5B3A8
+|    |--- file                     : Doc/SampleData/TDMSSample.tdms
+|    |--- forceChannel             : c1
+|    |--- distanceChannel          : 1
+|    |--- originalFile             : 20130903-134627 050Mg 500NaCl #004-001
+|    |--- dateTime                 : 735481
+|    |--- experiment               : 050Mg 500NaCl
+|    |--- moleculeNo               : 4
+|    |--- fileNo                   : 1
+|    |--- description              : 
+|    |--- beadDiameter             : 3.05
+|    |--- distanceCalibration      : 90.5
+|    |--- forceCalibration         : -452.564
+|    |--- forceOffset              : -0.146548
+|    |--- cornerFrequency          : 1548.8
+|    |--- trapStiffness            : 2.80293e+08
+|--- Marks:    
+|    |---   1 @1378    : F,d curve: Start                                                      
+|    |---   2 @23720   : F,d curve: End                                                        
+|    |---   3 @24999   : F,d curve: Start                                                      
+|    |---   4 @47040   : F,d curve: End                                                        
+|    |---   5 @48000   : F,d curve: Start                                                      
+|    |---   6 @50997   : F,d curve: End                                                        
+|--- History
+     |--- shift(d, -3.05)
+</pre><h2>Using Data Marks<a name="4"></a></h2><p>While performing measurements in the TWOM/Lumicks software, you can 'mark' time points of interest. Such <i>data marks</i> are also created automatically, for example when an F,d curve is created by the F,d Curve Plugin.</p><p>Data marks are also imported into the <tt>FdData</tt> object. You may, in fact, have already noticed them in the output of the <tt>disp</tt> command above. Each mark has a number, an associated time coordinate (in ms), and an optional description (or "comment").</p><p>We can visualize the location of the data marks in a plot of the F,d,t data:</p><pre class="codeinput">plotfd(fd, <span class="string">'style'</span>, <span class="string">'fdt'</span>, <span class="string">'showMarks'</span>);
+</pre><img vspace="5" hspace="5" src="AnalyzingLumicksData_01.png" alt=""> <p>Marks can also be used to make extraction of fragments of the data easier. In our example here, the data file contains three F,d Curves that were created with the software's F,d Curve Plugin; we can see the "start" and "end" data marks created by the plugin in the list of data marks.</p><p>If we'd like to extract the first F,d curve, we can use:</p><pre class="codeinput">fdCurve = fd.betweenMarks(1, 2);
+plotfd(fdCurve, <span class="string">'style'</span>, <span class="string">'fdt'</span>);
+</pre><img vspace="5" hspace="5" src="AnalyzingLumicksData_02.png" alt=""> <p>This little feature can also be used to automate extraction of F,d curves from the raw data.</p><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2014b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%% ANALYZING LUMICKS DATA
+% This document describes how to load, process, and analyze data that is
+% produced by the TWOM/Lumicks LabVIEW software (this is the software that
+% was used to measure the raw data from the paper). I will assume you have
+% already read the "Tutorial", and familiarized yourself with the basic
+% functions of the FDFIT package.
+
+%% Loading Data From TDMS Files
+% TWOM/Lumicks software stores the measured data in LabVIEW TDMS files.
+% TDMS is a file format specific to LabVIEW, but fortunately, it can easily
+% be imported into MATLAB. We'll use the <matlab:doc('readtdmsfile')
+% readtdmsfile> function for that:
+
+fd = readtdmsfile('Doc/SampleData/TDMSSample.tdms', 'c1', 1);
+
+%%
+% This command loads Force Channel 1, Distance 1. The function will also
+% automatically subtract the bead diameter, as found in the file's
+% metadata.
+%
+% If you want to load another force or distance channel, you can do so:
+%
+%   fd = readtdmsfile('Doc/SampleData/TDMSSample.tdms', 't2', 2);
+%
+% This loads the total force on Trap 2, combined with Distance 2.
+%
+% For data files made with older versions of TWOM, or in case the bead
+% diameter as stored in the file is incorrect, you can also specify the bead
+% diameter manually:
+%
+%   fd = readtdmsfile('Doc/SampleData/TDMSSample.tdms', 'c1', '1', 3.08);    % bead diameter 3.08 um
+%
+% If you'd rather pick a file by browsing, you can also do this:
+%
+%   fd = readtdmsfile();
+
+
+%%
+% Finally, please note that all metadata from the TDMS file is
+% automatically imported, too. Just use the |disp| function with the
+% |'full'| argument to show it:
+
+disp(fd, 'full');
+
+
+%% Using Data Marks
+% While performing measurements in the TWOM/Lumicks software, you can
+% 'mark' time points of interest. Such _data marks_ are also created
+% automatically, for example when an F,d curve is created by the F,d Curve
+% Plugin.
+%
+% Data marks are also imported into the |FdData| object. You may, in fact,
+% have already noticed them in the output of the |disp| command above. Each
+% mark has a number, an associated time coordinate (in ms), and an optional
+% description (or "comment").
+%
+% We can visualize the location of the data marks in a plot of the F,d,t
+% data:
+
+plotfd(fd, 'style', 'fdt', 'showMarks');
+
+%%
+% Marks can also be used to make extraction of fragments of the data
+% easier. In our example here, the data file contains three F,d Curves that
+% were created with the software's F,d Curve Plugin; we can see the "start"
+% and "end" data marks created by the plugin in the list of data marks.
+%
+% If we'd like to extract the first F,d curve, we can use:
+
+fdCurve = fd.betweenMarks(1, 2);
+plotfd(fdCurve, 'style', 'fdt');
+
+%%
+% This little feature can also be used to automate extraction of F,d curves
+% from the raw data.
+
+##### SOURCE END #####
+--></body></html>

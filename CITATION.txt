@@ -1,0 +1,21 @@
+To cite this tool in publications, please use:
+
+O.D. Broekmans, G.A. King, G.J. Stephens, G.J.L. Wuite, DNA Twist Changes With Magnesium(2+) Concentration, arXiv:1412.8753 [physics.bio-ph].
+
+
+For LaTeX users, the following BibTeX entry may be useful:
+
+@ARTICLE{
+   author = {{Broekmans}, O.~D. and {King}, G.~A. and {Stephens}, G.~J. and 
+	{Wuite}, G.~J.~L.},
+    title = "{DNA twist stability changes with magnesium(2+) concentration}",
+  journal = {ArXiv e-prints},
+archivePrefix = "arXiv",
+   eprint = {1412.8753},
+ primaryClass = "physics.bio-ph",
+ keywords = {Physics - Biological Physics},
+     year = 2014,
+    month = dec
+}
+
+
