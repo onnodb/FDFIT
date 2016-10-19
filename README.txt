@@ -54,7 +54,7 @@ a normal "for" loop, which is much slower.
 REPRODUCING THE FIGURES FROM THE PAPER
 ======================================
 
-Reproducing all the figures from the paper's main text and Supplementary
+Reproducing all the figures from the paper's main text [2] and Supplementary
 Information should be as easy as opening this folder in MATLAB, and running:
 
     >> init
@@ -62,7 +62,7 @@ Information should be as easy as opening this folder in MATLAB, and running:
 
 Then follow the on-screen instructions.
 
-NOTE: You will need to have downloaded the paper's raw data from Figshare [2]
+NOTE: You will need to have downloaded the paper's raw data from Figshare [3]
 for this to work.
 
 
@@ -71,7 +71,11 @@ REFERENCES
 
  [1]: http://www.nat.vu.nl/~gwuite/
 
- [2]: O.D. Broekmans, G.A. King, G.J. Stephens, and G.J.L. Wuite,
+ [2]: O.D. Broekmans, G.A. King, G.J. Stephens, G.J.L. Wuite, DNA Twist Stability 
+      Changes with Magnesium(2+) Concentration, Phys. Rev. Lett. 116 (2016), 
+      258102. https://doi.org/10.1103/PhysRevLett.116.258102
+
+ [3]: O.D. Broekmans, G.A. King, G.J. Stephens, and G.J.L. Wuite,
       "Double-stranded DNA force-extension data, as a function of magnesium 
       concentration." http://dx.doi.org/10.6084/m9.figshare.1299526 (2015).
 
