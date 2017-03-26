@@ -1,4 +1,4 @@
-classdef BasicFdFitModel
+classdef (Abstract) BasicFdFitModel
 
     properties
 
@@ -43,12 +43,52 @@ classdef BasicFdFitModel
         default_kT = 4.11;      % [pN nm]
         default_Fc = 30.6;      % [pN]
         default_C  = 440;       % [pN nm^2]
+        default_g0 = -637;      % [pN nm]
+        default_g1 = 17;        % [nm]
 
     end
 
     % ------------------------------------------------------------------------
 
     methods
+
+        function [fd_fit] = validateData(self, fd)
+            % Override this function to get an opportunity to validate fitted
+            % data before fitting --- e.g., to catch malformed data that might
+            % lead to incorrect fit results.
+            % You can also return a filtered dataset, instead of the default
+            % full dataset.
+            fd_fit = fd;
+        end
+
+        function [fopt] = getFitOptions(self)
+            fopt = fitoptions(self.getFitType());
+
+            sp = zeros(1, self.nFitParams);
+            lp = zeros(1, self.nFitParams);
+            up = zeros(1, self.nFitParams);
+            fn = fieldnames(self.fitParams);
+            for i = 1:self.nFitParams
+                sp(i) = self.fitParams.(fn{i});
+                lp(i) = self.fitParamBounds.(fn{i})(1);
+                up(i) = self.fitParamBounds.(fn{i})(2);
+            end
+            fopt.StartPoint = sp;
+            fopt.Lower      = lp;
+            fopt.Upper      = up;
+        end
+
+    end
+
+    methods (Abstract)
+
+        [ftype] = getFitType(self)
+
+    end
+
+    % ------------------------------------------------------------------------
+
+    methods % Getters & Setters
 
         function [val] = get.hasFixedParams(self)
             val = ~isempty(fieldnames(self.fixedParams));
@@ -76,7 +116,7 @@ classdef BasicFdFitModel
                 self.fitParamBounds = pb;
             elseif isstruct(val)
                 self.validateStructAssignment(val, self.fitParams);
-                self.fitParams = val;
+                self.fitParams = self.absorbStruct(self.fitParams, val);
             elseif isnumeric(val)
                 self.validateNumAssignment(val, self.fitParams);
                 fn = fieldnames(self.fitParams);
@@ -103,7 +143,7 @@ classdef BasicFdFitModel
                         error('Invalid bounds vector for "fitParamBounds.%s".', fn{i});
                     end
                 end
-                self.fitParamBounds = val;
+                self.fitParamBounds = self.absorbStruct(self.fitParamBounds, val);
             elseif isnumeric(val)
                 if ~ismatrix(val) || size(val,1) ~= length(fieldnames(self.fitParamBounds)) ...
                         || size(val,2) ~= 2
@@ -126,7 +166,7 @@ classdef BasicFdFitModel
                 self.fixedParams = val;
             elseif isstruct(val)
                 self.validateStructAssignment(val, self.fixedParams);
-                self.fixedParams = val;
+                self.fixedParams = self.absorbStruct(self.fixedParams, val);
             elseif isnumeric(val)
                 self.validateNumAssignment(val, self.fixedParams);
                 fn = fieldnames(self.fixedParams);
@@ -151,6 +191,14 @@ classdef BasicFdFitModel
         function validateNumAssignment(~, val, oldval)
             if ~isvector(val) || length(val) ~= length(fieldnames(oldval))
                 error('Invalid numeric assignment.');
+            end
+        end
+
+        function [newval] = absorbStruct(~, oldval, val)
+            newval = oldval;
+            fn = fieldnames(oldval);
+            for i = 1:length(fn)
+                newval.(fn{i}) = val.(fn{i});
             end
         end
 
