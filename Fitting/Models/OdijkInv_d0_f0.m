@@ -1,0 +1,23 @@
+classdef OdijkInv_d0_f0 < BasicFdFitModel
+
+    methods
+
+        function [self] = OdijkInv_d0_f0()
+            self.dependentVariable   = 'F';
+            self.independentVariable = 'd';
+
+            self.fitParams = struct(...
+                                  'Lp',     BasicFdFitModel.default_Lp ...
+                                , 'S',      BasicFdFitModel.default_S ...
+                                , 'd0',     0 ...
+                                , 'F0',     0 ...
+                                );
+
+            self.fixedParams = struct(...
+                                  'Lc',     BasicFdFitModel.default_Lc ...
+                                );
+        end
+
+    end
+
+end
