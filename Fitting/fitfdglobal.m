@@ -1,15 +1,10 @@
 function [fitRes, diagnosticInfo] = fitfdglobal(fdc, varargin)
-% FITFDGLOBAL Perform a global fit of the "odijk_d0_f0" model on a set of F,d data.
+% FITFDGLOBAL Perform a global fit of a fit model on a set of F,d data.
 %
 % This function uses 'lsqcurvefit' to perform a global fit to a set of DNA
 % force-extension curves. This means that all curves are fitted with the
-% Odijk eWLC model *simultaneously*, while sharing the physical parameters
-% "Lp" (persistence length) and "S" (stretch modulus).
-%
-% The model that is actually used for fitting, is the "odijk-d0-f0" model
-% (see "fitfd"). This is the Odijk eWLC, inversed (expressing force as a
-% function of distance, c.f. the paper), with a distance and force offset
-% included per-curve.
+% chosen model *simultaneously*, while sharing the physical parameters
+% given by the "sharedParams" argument.
 %
 % SYNTAX:
 % fitRes = fitfdglobal(fdc);
@@ -20,39 +15,22 @@ function [fitRes, diagnosticInfo] = fitfdglobal(fdc, varargin)
 % fdc = an FdDataCollection.
 %
 % KEY-VALUE PAIR ARGUMENTS:
-% Lc = value of Lc (contour length) to use while fitting (should be the theoretical,
-%       expected value of Lc) (default: 16.5 um).
-% startParams = vector [Lp S d0 F0] with starting values for the fit.
-%       (Note: specifying d0 and F0 is optional).
-% lBounds = lower bounds for the fit parameters; vector like 'startParams'.
-% uBounds = upper bounds for the fit parameters; vector like 'startParams'.
+% sharedParams = cell array of strings, with the names of fit parameters
+%       that should be shared among datasets (as opposed to varying per
+%       dataset).
 %
 % FLAG ARGUMENTS:
 % computeConfInt = if given, also computes 95% confidence intervals for the
 %       fit parameters. WARNING: can be (extremely) slow for large numbers
 %       (>= 20) of datasets.
-% noTrim = normally, data points above 30 pN ('trimForce' constant in the
-%       code below) are automatically discarded; pass in this flag to
-%       disable this behavior.
 %
 % OUTPUT:
-% fitRes = structure with the fit parameters found, as well as the value of
-%       'Lc' (contour length) used.
+% fitRes = structure with the fit parameters found.
 %       If the flag argument 'computeConfInt' was given, then each value has
 %       the form [fit lbound ubound], where "lbound" and "ubound" are the
 %       bounds of the 95% confidence intervals for each fit parameter.
-%   .Lp = persistence length (in nm).
-%   .Lc = contour length (in um) (not a fit parameter; was fixed to the value
-%           'Lc' as passed into this function; see "Key-Value Pair Arguments").
-%   .S = stretching modulus (in pN).
-%   .d0 = distance offset (in um).
-%   .F0 = force offset (in pN).
 % diagnosticInfo = structure with extra diagnostic information about the fit,
 %       as returned by 'lsqcurvefit'.
-%
-% NOTE:
-% Fitting other models than "odijk_d0_f0" is not currently possible. Given that
-% this model gives the best fits to F,d curves, this shouldn't be an issue.
 %
 % SEE ALSO:
 % lsqcurvefit, fitfd
@@ -62,14 +40,11 @@ function [fitRes, diagnosticInfo] = fitfdglobal(fdc, varargin)
 
 defaultArgs = struct(...
                       'computeConfInt',             false ...
-                    , 'lBounds',                    [] ...
-                    , 'Lc',                         16.5 ...
-                    , 'startParams',                [50 1500 0 0] ... % Lp S d0 F0
-                    , 'uBounds',                    [] ...
-                    , 'noTrim',                     false ...
+                    , 'model',                      [] ...
+                    , 'sharedParams',               [] ...
                     );
 
-args = parseArgs(varargin, defaultArgs, {'computeConfInt','noTrim'});
+args = parseArgs(varargin, defaultArgs, {'computeConfInt'});
 
 if isa(fdc, 'FdDataCollection')
     % ok
@@ -84,15 +59,19 @@ elseif fdc.length == 1
     warning('fitfdglobal:SingleCurve', 'Only fitting a single F,d curve; you may want to use "fitfd" instead.');
 end
 
-args.startParams = checkParamArg(args.startParams, 0, 'startParams');
-args.lBounds     = checkParamArg(args.lBounds, -Inf, 'lBounds');
-args.uBounds     = checkParamArg(args.uBounds, +Inf, 'uBounds');
-
-if isempty(args.startParams)
-    error('fitfdglobal:MissingArgument', 'Missing argument "startParams": no starting values given for fit parameters.');
+if isempty(args.model) || ~isa(args.model, 'BasicFdFitModel')
+    error('fitfdglobal:InvalidFitModel', 'Invalid fit model.');
 end
 
-trimForce = 30;     % Odijk model is valid up to 30 pN; trim forces above that
+if isempty(args.sharedParams) || ~iscellstr(args.sharedParams)
+    error('fitfdglobal:InvalidSharedParams', 'sharedParams should be a cell array of fit parameter names.');
+end
+for i = 1:length(args.sharedParams)
+    if ~any(strcmp(args.sharedParams{i}, args.model.fitParamNames))
+        error('fitfdglobal:InvalidSharedParams', 'sharedParams: invalid fit parameter %s', ...
+                args.sharedParams{i});
+    end
+end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -102,7 +81,8 @@ trimForce = 30;     % Odijk model is valid up to 30 pN; trim forces above that
 %    'fit_data_d' and 'fit_data_f'.
 %  - Additionally, we keep track of the data set that each of these data points
 %    originally comes from ('fit_data_i').
-%  - We now fit a function to this concatenated data, with (2+2N) parameters.
+%  - We now fit a function to this concatenated data, with (M+N*K) parameters.
+%    The first M are the shared parameters
 %    The first two of these are "Lp" and "S", which are shared. The remaining
 %    2N are "d0" and "F0", which may vary per fitted dataset.
 %  - In the fit function "fitFun", we loop over all datasets, and generate
@@ -119,18 +99,12 @@ fit_data_d = [];            % concatenated distance values
 fit_data_f = [];            % concatenated force values
 fit_data_i = [];            % origin of each data point
 
-if ~args.noTrim
-    disp('Only using data up to 30 pN (use the "noTrim" flag to avoid this).');
-end
-
 for i = 1:nDatasets
-    cur_data_d = fdc.items{i}.d(:)';
-    cur_data_f = fdc.items{i}.f(:)';
+    % Check if data is OK for fitting (and possibly filter data).
+    fd_fit = args.model.validateData(fdc.items{i});
 
-    if ~args.noTrim
-        cur_data_d = cur_data_d(cur_data_f <= trimForce);
-        cur_data_f = cur_data_f(cur_data_f <= trimForce);
-    end
+    cur_data_d = fd_fit.d(:)';
+    cur_data_f = fd_fit.f(:)';
 
     fit_data_d = [fit_data_d cur_data_d]; %#ok
     fit_data_f = [fit_data_f cur_data_f]; %#ok
@@ -142,39 +116,73 @@ assert(length(fit_data_f) == nTotalPoints);
 assert(length(fit_data_i) == nTotalPoints);
 
 
+% Figure out which parameters to fit, share, and fix.
+sharedParams    = args.sharedParams;
+nonSharedParams = setdiff(args.model.fitParamNames, args.sharedParams);
+nonSharedParams = nonSharedParams(:)';
+
+nSharedParams    = length(sharedParams);
+nNonSharedParams = length(nonSharedParams);
+nParams          = args.model.nFitParams;
+assert(nSharedParams + nNonSharedParams == nParams);
+
+sharedParamMapping = zeros(1,nSharedParams);
+for i = 1:nSharedParams
+    sharedParamMapping(i) = find(strcmp(sharedParams(i), args.model.fitParamNames));
+end
+
+nonSharedParamMapping = zeros(1,nNonSharedParams);
+for i = 1:nNonSharedParams
+    nonSharedParamMapping(i) = find(strcmp(nonSharedParams(i), args.model.fitParamNames));
+end
+
+
 % Set up the fit.
+sharedParamVal = zeros(1,nSharedParams);
+sharedParamLow = zeros(1,nSharedParams);
+sharedParamUpp = zeros(1,nSharedParams);
+for i = 1:nSharedParams
+    sharedParamVal(i) = args.model.fitParams.(sharedParams{i});
+    sharedParamLow(i) = args.model.fitParamBounds.(sharedParams{i})(1);
+    sharedParamUpp(i) = args.model.fitParamBounds.(sharedParams{i})(2);
+end
 
-p0 = [args.startParams(1:2) repmat(args.startParams(3:4), 1, nDatasets)];
+nonSharedParamVal = zeros(1,nNonSharedParams);
+nonSharedParamLow = zeros(1,nNonSharedParams);
+nonSharedParamUpp = zeros(1,nNonSharedParams);
+for i = 1:nNonSharedParams
+    nonSharedParamVal(i) = args.model.fitParams.(nonSharedParams{i});
+    nonSharedParamLow(i) = args.model.fitParamBounds.(nonSharedParams{i})(1);
+    nonSharedParamUpp(i) = args.model.fitParamBounds.(nonSharedParams{i})(2);
+end
+
+p0 = [sharedParamVal  repmat(nonSharedParamVal, 1, nDatasets)];
+% e.g., for eWLC, with Lp and S shared:
 %    [Lp S d0(1) F0(1) d0(2) F0(2) ... d0(N) F0 (N)]
-%              ^ dataset index
+%             ^ dataset index
 
-if isempty(args.lBounds)
-    lb = [];
-else
-    lb = [args.lBounds(1:2) repmat(args.lBounds(3:4), 1, nDatasets)];
-end
-if isempty(args.uBounds)
-    ub = [];
-else
-    ub = [args.uBounds(1:2) repmat(args.uBounds(3:4), 1, nDatasets)];
-end
+lb = [sharedParamLow  repmat(nonSharedParamLow, 1, nDatasets)];
+ub = [sharedParamUpp  repmat(nonSharedParamUpp, 1, nDatasets)];
+
 
 % Set up Jacobian pattern
-jp_points = [];
-cumTotalNDataPoints = 0;
+disp('Setting up Jacobian...');
+jp_points = zeros(nTotalPoints*nParams, 2);
+jp_idx = 1;
 for i = 1:nDatasets
-    nPointsInCurDataSet = sum(fit_data_i == i);
+    nPointsInCurDataSet = sum(fit_data_i==i);
     for j = 1:nPointsInCurDataSet
-        jp_points = [jp_points                      ; ...
-                     cumTotalNDataPoints+j, 1       ; ...
-                     cumTotalNDataPoints+j, 2       ; ...
-                     cumTotalNDataPoints+j, 2*i+1   ; ...
-                     cumTotalNDataPoints+j, 2*i+2     ...
-                     ]; %#ok
+        for k = 1:nSharedParams
+            jp_points((jp_idx+j-2)*nParams+k,:) = [jp_idx+j-1, k];
+        end
+        for k = 1:nNonSharedParams
+            jp_points((jp_idx+j-2)*nParams+nSharedParams+k,:) = ...
+                     [jp_idx+j-1,  nSharedParams+1+(i-1)*nNonSharedParams+(k-1)];
+        end
     end
-    cumTotalNDataPoints = cumTotalNDataPoints + nPointsInCurDataSet;
+    jp_idx = jp_idx + nPointsInCurDataSet;
 end
-jacobpattern = sparse(jp_points(:,1), jp_points(:,2), ones(length(jp_points),1));
+jacobpattern = sparse(jp_points(:,1), jp_points(:,2), ones(size(jp_points,1),1));
 
 fitopts = optimoptions('lsqcurvefit' ...
                 , 'Algorithm',              'trust-region-reflective' ...
@@ -182,13 +190,29 @@ fitopts = optimoptions('lsqcurvefit' ...
                 , 'MaxFunEvals',            +Inf ...
                 );
 
+% Set up fit function, its parameters, and its data.
+switch args.model.dependentVariable
+    case 'F'
+        depData   = fit_data_f;
+        indepData = fit_data_d;
+    case 'd'
+        depData   = fit_data_d;
+        indepData = fit_data_f;
+    otherwise
+        error('Invalid dependent variable for model object.');
+end
+
+fun = args.model.getFitFun();
+
+
+% Execute fit.
+disp('Executing lsqcurvefit...');
 [fitParams, ~, residual, exitFlag, output, ~, jacobian] = ...
                 lsqcurvefit(...
-                    @(x, xdata) fitFun(x, xdata, fit_data_i), ...
-                    p0, ...
-                    fit_data_d, ...
-                    fit_data_f, ...
-                    lb, ub, ...
+                    @(x, xdata) fitFun(x, xdata, fun, fit_data_i), ... % f(x)
+                    p0, ...                 % start values for fit params
+                    indepData, depData, ... % x, y for 'y = f(x)'
+                    lb, ub, ...             % lower and upper bounds for fit params
                     fitopts ...
                     );
 
@@ -196,50 +220,54 @@ if args.computeConfInt
     disp('Computing confidence intervals...');
     ci = nlparci(fitParams, residual, 'jacobian', jacobian);
 
-    confInt = struct(...
-                     'Lp',              ci(1,:), ...
-                     'S',               ci(2,:), ...
-                     'd0',              ci(3:2:end-1,:), ...
-                     'F0',              ci(4:2:end,:) ...
-                     );
+    confInt = paramVectorToStruct(ci);
 else
-    confInt = struct(...
-                     'Lp',              [], ...
-                     'S',               [], ...
-                     'd0',              [], ...
-                     'F0',              [] ...
-                     );
+    confInt = [];
 end
 
-fitRes = struct(...
-                'Lp',               [fitParams(1) confInt.Lp], ...
-                'Lc',               args.Lc, ...
-                'S',                [fitParams(2) confInt.S], ...
-                'd0',               [fitParams(3:2:end-1)' confInt.d0], ...
-                'F0',               [fitParams(4:2:end)' confInt.F0] ...
-                );
+fitRes = paramVectorToStruct(fitParams);
+
+if ~isempty(confInt)
+    fn = fieldnames(fitRes);
+    for i = 1:length(fn)
+        fitRes.(fn{i}) = [fitRes.(fn{i}), confInt.(fn{i})];
+    end
+end
 
 diagnosticInfo = struct('exitFlag', exitFlag, 'output', output);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    function [F] = fitFun(p, d, data_i)
-        F = zeros(1,nTotalPoints);
-        for k = 1:nDatasets
-            F(data_i==k) = fOdijkInv_d0_f0(d(data_i==k), p(1), args.Lc, p(2), p(k*2+1), p(k*2+2));
+    function [depVar] = fitFun(paramVals, indepVar, fun, data_i)
+        depVar = zeros(size(indepVar));
+        for m = 1:nDatasets
+            p = cell(1,args.model.nFitParams);
+            for q = 1:nSharedParams
+                p{sharedParamMapping(q)} = paramVals(q);
+            end
+            for q = 1:nNonSharedParams
+                p{nonSharedParamMapping(q)} = ...
+                        paramVals( nSharedParams + nNonSharedParams*(m-1) + q );
+            end
+            depVar(data_i==m) = fun( p{:}, indepVar(data_i==m) );
         end
     end
 
-    function [arg] = checkParamArg(arg, autoFillValue, argName)
-        switch length(arg)
-            case 2
-                arg = [arg autoFillValue autoFillValue];
-            case 3
-                arg = [arg autoFillValue];
-            case {0,4}
-                % ok
-            otherwise
-                error('fitfdglobal:InvalidArgument', 'Invalid argument "%s": vector [Lp S d0 F0] expected.', argName);
+    function [res] = paramVectorToStruct(paramVals)
+        fn = args.model.fitParamNames;
+        res = struct();
+        for q = 1:length(fn)
+            res.(fn{q}) = [];
+        end
+        for q = 1:nSharedParams
+            res.(fn{sharedParamMapping(q)}) = paramVals( sharedParamMapping(q) );
+        end
+        for m = 1:nDatasets
+            for q = 1:nNonSharedParams
+                res.(fn{nonSharedParamMapping(q)}) = ...
+                    [ res.(fn{nonSharedParamMapping(q)}), ...
+                      paramVals( nSharedParams + nNonSharedParams*(m-1) + q ) ];
+            end
         end
     end
 
