@@ -78,7 +78,7 @@ defaultArgs = struct(...
 args = parseArgs(varargin, defaultArgs, {'makePlot','noTrim','skipFullFitInfo'});
 
 if isempty(args.model) || ~isa(args.model, 'BasicFdFitModel')
-    error('Invalid fit model.');
+    error('fitfd:InvalidFitModel', 'Invalid fit model.');
 end
 
 
@@ -119,7 +119,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Do fit
 
-% Check if data is OK for fitting.
+% Check if data is OK for fitting (and possibly filter data).
 fd_fit = args.model.validateData(fd);
 
 % Do actual fit.
