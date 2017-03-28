@@ -28,6 +28,9 @@ classdef (Abstract) BasicFdFitModel
 
     properties (Dependent)
 
+        fitParamNames;
+        fixedParamNames;
+
         nFitParams;
         nFixedParams;
 
@@ -78,17 +81,34 @@ classdef (Abstract) BasicFdFitModel
             fopt.Upper      = up;
         end
 
+        function [ftype] = getFitType(self)
+            ftype = fittype(self.getFitFun());
+        end
+
     end
 
     methods (Abstract)
 
-        [ftype] = getFitType(self)
+        [fun]   = getFitFun(self)
+                  % Must return a function handle to a function that takes
+                  % all fit parameters as its first arguments, in the order
+                  % defined by the ordering of field names in 'fitParams'.
+                  % The last argument must be the independent variable (possibly
+                  % as a vector).
 
     end
 
     % ------------------------------------------------------------------------
 
     methods % Getters & Setters
+
+        function [val] = get.fitParamNames(self)
+            val = fieldnames(self.fitParams);
+        end
+
+        function [val] = get.fixedParamNames(self)
+            val = fieldnames(self.fixedParams);
+        end
 
         function [val] = get.hasFixedParams(self)
             val = ~isempty(fieldnames(self.fixedParams));
