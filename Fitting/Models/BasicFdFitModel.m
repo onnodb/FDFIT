@@ -85,6 +85,31 @@ classdef (Abstract) BasicFdFitModel
             ftype = fittype(self.getFitFun());
         end
 
+        function disp(self)
+            fprintf('--------[ F,d Fit Model: %s ]--------\n', class(self));
+            fprintf('Model function: %s(%s)\n', ...
+                    self.dependentVariable, self.independentVariable);
+            fprintf('Fit parameters:\n');
+            n_printParams(self.fitParams, self.fitParamBounds);
+            fprintf('Fixed parameters:\n');
+            n_printParams(self.fixedParams);
+            fprintf('-----------------------------------%s\n', ...
+                    repmat('-', 1, length(class(self))));
+
+            function n_printParams(paramList, paramBounds)
+                fn = fieldnames(paramList);
+                for i = 1:length(fn)
+                    fprintf('% 8s:  %10.3f', ...
+                            fn{i}, paramList.(fn{i}) );
+                    if nargin >= 2
+                        fprintf('    [%10.3f -- %10.3f ]', ...
+                                paramBounds.(fn{i})(1), paramBounds.(fn{i})(2) );
+                    end
+                    fprintf('\n');
+                end
+            end
+        end
+
     end
 
     methods (Abstract)
