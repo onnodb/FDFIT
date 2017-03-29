@@ -23,6 +23,10 @@ function [fitRes, diagnosticInfo, confInt] = fitfdglobal(fdc, varargin)
 % computeConfInt = if given, also computes 95% confidence intervals for the
 %       fit parameters. WARNING: can be (extremely) slow for large numbers
 %       (>= 20) of datasets.
+% options = cell array with key-value pair arguments that define options
+%       to the 'lsqcurvefit' "options" argument. For example:
+%
+%       >> fitfdglobal(..., 'options', {'MaxIter', 1000});
 %
 % OUTPUT:
 % fitRes = structure with the fit parameters found.
@@ -43,6 +47,7 @@ function [fitRes, diagnosticInfo, confInt] = fitfdglobal(fdc, varargin)
 defaultArgs = struct(...
                       'computeConfInt',             false ...
                     , 'model',                      [] ...
+                    , 'options',                    {{}} ...
                     , 'sharedParams',               [] ...
                     );
 
@@ -191,6 +196,13 @@ fitopts = optimoptions('lsqcurvefit' ...
                 , 'JacobPattern',           jacobpattern ...
                 , 'MaxFunEvals',            +Inf ...
                 );
+
+if ~isempty(args.options)
+    while ~isempty(args.options)
+        fitopts.(args.options{1}) = args.options{2};
+        args.options(1:2) = []; % pop
+    end
+end
 
 % Set up fit function, its parameters, and its data.
 switch args.model.dependentVariable
