@@ -1,4 +1,4 @@
-function [fitRes, diagnosticInfo] = fitfdglobal(fdc, varargin)
+function [fitRes, diagnosticInfo, confInt] = fitfdglobal(fdc, varargin)
 % FITFDGLOBAL Perform a global fit of a fit model on a set of F,d data.
 %
 % This function uses 'lsqcurvefit' to perform a global fit to a set of DNA
@@ -26,11 +26,13 @@ function [fitRes, diagnosticInfo] = fitfdglobal(fdc, varargin)
 %
 % OUTPUT:
 % fitRes = structure with the fit parameters found.
-%       If the flag argument 'computeConfInt' was given, then each value has
-%       the form [fit lbound ubound], where "lbound" and "ubound" are the
-%       bounds of the 95% confidence intervals for each fit parameter.
 % diagnosticInfo = structure with extra diagnostic information about the fit,
 %       as returned by 'lsqcurvefit'.
+% confInt = if the 'computeConfInt' flag was given, this output argument
+%       contains a struct with each value being [lbound ubound], where "lbound"
+%       and "ubound" are bounds of the 95% confidence intervals for each fit
+%       parameter. For shared parameters, this is an Mx2 matrix, one for each of
+%       the M datasets.
 %
 % SEE ALSO:
 % lsqcurvefit, fitfd
@@ -219,21 +221,13 @@ disp('Executing lsqcurvefit...');
 if args.computeConfInt
     disp('Computing confidence intervals...');
     ci = nlparci(fitParams, residual, 'jacobian', jacobian);
-
+    assignin('base', 'temp', ci);
     confInt = paramVectorToStruct(ci);
 else
     confInt = [];
 end
 
 fitRes = paramVectorToStruct(fitParams);
-
-if ~isempty(confInt)
-    fn = fieldnames(fitRes);
-    for i = 1:length(fn)
-        fitRes.(fn{i}) = [fitRes.(fn{i}), confInt.(fn{i})];
-    end
-end
-
 diagnosticInfo = struct('exitFlag', exitFlag, 'output', output);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -254,19 +248,22 @@ diagnosticInfo = struct('exitFlag', exitFlag, 'output', output);
     end
 
     function [res] = paramVectorToStruct(paramVals)
+        if isvector(paramVals)
+            paramVals = paramVals(:);
+        end
         fn = args.model.fitParamNames;
         res = struct();
         for q = 1:length(fn)
             res.(fn{q}) = [];
         end
         for q = 1:nSharedParams
-            res.(fn{sharedParamMapping(q)}) = paramVals( sharedParamMapping(q) );
+            res.(fn{sharedParamMapping(q)}) = paramVals( sharedParamMapping(q),: );
         end
         for m = 1:nDatasets
             for q = 1:nNonSharedParams
                 res.(fn{nonSharedParamMapping(q)}) = ...
-                    [ res.(fn{nonSharedParamMapping(q)}), ...
-                      paramVals( nSharedParams + nNonSharedParams*(m-1) + q ) ];
+                    [ res.(fn{nonSharedParamMapping(q)}); ...
+                      paramVals( nSharedParams + nNonSharedParams*(m-1) + q ,: ) ];
             end
         end
     end
