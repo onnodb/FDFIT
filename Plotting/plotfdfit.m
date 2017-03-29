@@ -4,6 +4,9 @@ function plotfdfit(varargin)
 % SYNTAX:
 % plotfdfit(fd, fitobject, model)
 %       Plot the results of a fit made with the "fitfd" function.
+% plotfdfit(fd, fitparams, model)
+%       Pass a numeric vector with parameter values instead. Useful for fit
+%       results as returned from "fitfdglobal".
 % plotfdfit(..., 'key', value, ...)
 %       For a description of the key-value pair arguments, see below.
 % plotfdfit(ax, ...)
@@ -44,11 +47,29 @@ if length(varargin) < 3
     error('plotfdfit:InvalidArgument', 'Invalid arguments: no arguments given.');
 end
 
-[fd, fitObject, model] = varargin{1:3};
+[fd, fitRes, model] = varargin{1:3};
 varargin = varargin(4:end);
 
+if isa(fitRes, 'cfit')
+    resMode = 'fitobject';
+    fitObject = fitRes;
+elseif isstruct(fitRes)
+    resMode = 'fitparams';
+    fitParams = fitRes;
+else
+    error('plotfdfit:InvalidFitResult', ...
+          'Invalid arguments: fit result should be a fit object or a fit struct');
+end
+
 if ~isa(model, 'BasicFdFitModel')
-    error('Invalid model: object of BasicFdFitModel descendent expected.');
+    error('plotfdfit:InvalidFitModel', ...
+          'Invalid model: object of BasicFdFitModel descendent expected.');
+end
+switch model.dependentVariable
+    case {'F', 'd'}
+        % ok
+    otherwise
+        error('Invalid dependent variable for model object.');
 end
 
 % Parse remaining key-value pair arguments
@@ -76,17 +97,40 @@ plotfun(axesHandle, fd.d, fd.f, '.b');
 hold(axesHandle, 'on');
 
 % Plot fit.
-switch model.dependentVariable
-    case 'F'
-        makeFitPlot(fd.d, fitObject(fd.d));
-    case 'd'
-        makeFitPlot(fitObject(fd.f), fd.f);
-    otherwise
-        error('Invalid dependent variable for model object.');
+switch resMode
+
+    case 'fitobject'
+        switch model.dependentVariable
+            case 'F'
+                makeFitPlot(fd.d, fitObject(fd.d));
+            case 'd'
+                makeFitPlot(fitObject(fd.f), fd.f);
+        end
+
+        fParamList = [coeffnames(fitObject) ...
+                      num2cell(coeffvalues(fitObject))' ...
+                      num2cell(confint(fitObject))' ...
+                      ]';
+        paramText = sprintf('%8.8s: %12g  (%12g -- %-12g)\n', fParamList{:});
+
+    case 'fitparams'
+        fun = model.getFitFun();
+        p = num2cell(fitResStructToVect(fitRes, model));
+
+        switch(model.dependentVariable)
+            case 'F'
+                makeFitPlot(fd.d, fun(p{:}, fd.d));
+            case 'd'
+                makeFitPlot(fun(p{:}, fd.f), fd.f);
+        end
+        paramText = '';
+        fn = fieldnames(fitRes);
+        for i = 1:length(fn)
+            paramText = [paramText ...
+                         sprintf('%8.8s: %12g\n', fn{i}, fitRes.(fn{i}) )]; %#ok
+        end
 end
 
-fParamList = [coeffnames(fitObject) num2cell(coeffvalues(fitObject))' num2cell(confint(fitObject))']';
-paramText = sprintf('%8.8s: %12g  (%12g -- %-12g)\n', fParamList{:});
 
 text(0.05, 0.85, paramText, ...
         'Parent',      axesHandle, ...
@@ -110,6 +154,19 @@ end
         % To get a nice line, make sure the data is ordered by ascending 'd'
         sortVals = sortrows([d(:) f(:)]);
         plotfun(axesHandle, sortVals(:,1), sortVals(:,2), '-r');
+    end
+
+    function [p] = fitResStructToVect(s, model)
+        fn = fieldnames(s);
+        p = zeros(1,length(model.fitParamNames));
+        for m = 1:length(fn)
+            idx = find(strcmp(fn{m}, model.fitParamNames));
+            if isempty(idx)
+                error('plotfdfit:InvalidArgument', ...
+                      'Invalid argument fitparams: unknown model parameter "%s".', fn{m});
+            end
+            p(idx) = s.(fn{m});
+        end
     end
 
 end
